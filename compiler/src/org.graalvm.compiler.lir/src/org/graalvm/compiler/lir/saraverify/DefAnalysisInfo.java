@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -279,6 +280,44 @@ public class DefAnalysisInfo {
         evictedTriples.stream().forEach(triple -> evictedSet.add(new Triple(triple.location, triple.value, instruction)));
     }
 
+    public static DefAnalysisInfo mergeDefAnalysisInfo(DefAnalysisInfo defAnalysisInfo1, DefAnalysisInfo defAnalysisInfo2) {
+        DefAnalysisInfo mergedDefAnalysisInfo = new DefAnalysisInfo();
+
+        // add evicted triples from both parameters to the merged def analysis info
+        mergedDefAnalysisInfo.evictedSet.addAll(defAnalysisInfo1.evictedSet);
+        mergedDefAnalysisInfo.evictedSet.addAll(defAnalysisInfo2.evictedSet);
+
+        // group location triples of the first def analysis info by the location
+        Map<Value, List<Triple>> groupedLocationTriples1 = defAnalysisInfo1.getGroupedTriples();
+
+        // iterate over list of triples for every location
+        for (Entry<Value, List<Triple>> entry : groupedLocationTriples1.entrySet()) {
+            assert entry.getValue().size() > 0 : "Location set holds one or more triples for the given location but with no value.";
+            DuSequenceWeb web1 = entry.getValue().get(0).getValue();
+
+            // check, if the same location in the second def analysis info holds the same value
+            if (defAnalysisInfo2.locationSet.stream()           //
+                            .filter(triple -> triple.getLocation().equals(entry.getKey()))          //
+                            .allMatch(triple -> triple.value.equals(web1))) {
+                // add to location in merged
+                mergedDefAnalysisInfo.locationSet.addAll(entry.getValue());
+            } else {
+                // add to evicted in merged
+                mergedDefAnalysisInfo.evictedSet.addAll(entry.getValue());
+            }
+        }
+
+        // get all triples. that were not the same (regarding the combination of location and value)
+        // in both def analysis infos
+        List<Triple> inconsistentLocationTriples2 = defAnalysisInfo2.locationSet.stream()       //
+                        .filter(triple -> !mergedDefAnalysisInfo.locationSet.contains(triple)).collect(Collectors.toList());
+
+        // add these triples to the merged evicted set
+        mergedDefAnalysisInfo.evictedSet.addAll(inconsistentLocationTriples2);
+
+        return mergedDefAnalysisInfo;
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -300,8 +339,15 @@ public class DefAnalysisInfo {
     }
 
     @Override
-    protected Object clone() throws CloneNotSupportedException {
-        return new DefAnalysisInfo(cloneSet(locationSet), cloneSet(staleSet), cloneSet(evictedSet));
+    protected DefAnalysisInfo clone() {
+        try {
+            return new DefAnalysisInfo(cloneSet(locationSet), cloneSet(staleSet), cloneSet(evictedSet));
+        } catch (CloneNotSupportedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     private static Set<Triple> cloneSet(Set<Triple> set) throws CloneNotSupportedException {

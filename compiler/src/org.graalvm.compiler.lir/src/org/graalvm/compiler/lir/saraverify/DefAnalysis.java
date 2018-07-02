@@ -203,11 +203,11 @@ public class DefAnalysis {
                             .collect(Collectors.toList());
 
             // get all DefAnalysisInfos for visited predecessors
-            List<DefAnalysisInfo> defAnalysisInfos = visitedPredecessors.stream()           //
+            List<DefAnalysisInfo> visitedDefAnalysisInfos = visitedPredecessors.stream()           //
                             .map(block -> blockDefAnalysisInfos.get(block)) //
                             .collect(Collectors.toList());
 
-            // merge of phi
+            // merge of phis
 
             // log information
             debugContext.log(3, "merging of phis ...");
@@ -217,7 +217,7 @@ public class DefAnalysis {
             List<Value> phiInValues = blockPhiInValues.get(mergeBlock);
             LabelOp labelInstruction = (LabelOp) lir.getLIRforBlock(mergeBlock).get(0);
 
-            // check if label instruction is phi and if all predecessors are visited
+            // check if label instruction is phi
             if (labelInstruction.isPhiIn()) {
 
                 // get jump instructions for predecessor blocks
@@ -233,7 +233,7 @@ public class DefAnalysis {
                     BlockMap<List<Triple>> phiOutLocationTriplesMap = new BlockMap<>(lir.getControlFlowGraph());
 
                     // get all locations from the predecessors that hold a value
-                    List<Value> locations = DefAnalysisInfo.distinctLocations(defAnalysisInfos);
+                    List<Value> locations = DefAnalysisInfo.distinctLocations(visitedDefAnalysisInfos);
 
                     for (AbstractBlockBase<?> predecessor : visitedPredecessors) {
                         // mapping for phi out
@@ -256,32 +256,18 @@ public class DefAnalysis {
             }
 
             // merge of sets
+            debugContext.log(3, "merging of sets...");
+            if (visitedDefAnalysisInfos.size() == 1) {
+                mergedDefAnalysisInfo = visitedDefAnalysisInfos.get(0).clone();
 
-            // log information
-            debugContext.log(3, "merging of sets ...");
-
-            debugContext.log(3, "location intersection");
-            Set<Triple> locationIntersection = DefAnalysisInfo.locationSetIntersection(defAnalysisInfos);
-            debugContext.log(3, "stale union");
-            Set<Triple> staleUnion = DefAnalysisInfo.staleSetUnion(defAnalysisInfos);
-            debugContext.log(3, "evicted union");
-            Set<Triple> evicted = DefAnalysisInfo.evictedSetUnion(defAnalysisInfos);
-
-            debugContext.log(3, "location inconsistent");
-            Set<Triple> locationInconsistent = DefAnalysisInfo  //
-                            .locationSetUnionStream(defAnalysisInfos)   //
-                            .filter(triple -> !DefAnalysisInfo.containsTriple(triple, locationIntersection))    //
-                            .collect(Collectors.toSet());
-
-            debugContext.log(3, "stale union");
-            Set<Triple> stale = staleUnion.stream() //
-                            .filter(triple -> !DefAnalysisInfo.containsTriple(triple, locationInconsistent))    //
-                            .collect(Collectors.toSet());
-
-            debugContext.log(3, "add inconsistent to evicted");
-            evicted.addAll(locationInconsistent);
-
-            mergedDefAnalysisInfo = new DefAnalysisInfo(locationIntersection, stale, evicted);
+            } else {
+                DefAnalysisInfo defAnalysisInfo0 = visitedDefAnalysisInfos.get(0);
+                DefAnalysisInfo defAnalysisInfo1 = visitedDefAnalysisInfos.get(1);
+                DefAnalysisInfo firstMerge = DefAnalysisInfo.mergeDefAnalysisInfo(defAnalysisInfo0, defAnalysisInfo1);
+                mergedDefAnalysisInfo = visitedDefAnalysisInfos.stream()    //
+                                .filter(defAnalysisInfo -> (defAnalysisInfo != defAnalysisInfo0) || (defAnalysisInfo != defAnalysisInfo1))  //
+                                .collect(Collectors.reducing(firstMerge, (x, y) -> DefAnalysisInfo.mergeDefAnalysisInfo(x, y)));
+            }
 
             if (phiInValues == null) {
                 debugContext.log(3, "merging done");
@@ -289,7 +275,7 @@ public class DefAnalysis {
             }
 
             // add new triples for phi in
-            debugContext.log(3, "add triples of phis");
+            debugContext.log(3, "add triples of phis...");
             int i = 0;
             for (Value phiInValue : phiInValues) {
                 // get locations for phi in value
