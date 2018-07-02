@@ -295,22 +295,30 @@ public class DefAnalysisInfo {
             assert entry.getValue().size() > 0 : "Location set holds one or more triples for the given location but with no value.";
             DuSequenceWeb web1 = entry.getValue().get(0).getValue();
 
+            // get triples with location from def analysis info 2
+            List<Triple> locationTriples2 = defAnalysisInfo2.locationSet.stream()           //
+                            .filter(triple -> triple.getLocation().equals(entry.getKey())).collect(Collectors.toList());
+
             // check, if the same location in the second def analysis info holds the same value
-            if (defAnalysisInfo2.locationSet.stream()           //
-                            .filter(triple -> triple.getLocation().equals(entry.getKey()))          //
-                            .allMatch(triple -> triple.value.equals(web1))) {
+            if (locationTriples2.stream().allMatch(triple -> triple.value.equals(web1))) {
                 // add to location in merged
                 mergedDefAnalysisInfo.locationSet.addAll(entry.getValue());
+                mergedDefAnalysisInfo.locationSet.addAll(locationTriples2);
             } else {
                 // add to evicted in merged
                 mergedDefAnalysisInfo.evictedSet.addAll(entry.getValue());
+                mergedDefAnalysisInfo.evictedSet.addAll(locationTriples2);
             }
         }
 
         // get all triples. that were not the same (regarding the combination of location and value)
         // in both def analysis infos
-        List<Triple> inconsistentLocationTriples2 = defAnalysisInfo2.locationSet.stream()       //
-                        .filter(triple -> !mergedDefAnalysisInfo.locationSet.contains(triple)).collect(Collectors.toList());
+// List<Triple> inconsistentLocationTriples2 = defAnalysisInfo2.locationSet.stream() //
+// .filter(triple ->
+// !mergedDefAnalysisInfo.locationSet.contains(triple)).collect(Collectors.toList());
+        List<Triple> inconsistentLocationTriples2 = defAnalysisInfo2.locationSet.stream() //
+                        .filter(triple -> !groupedLocationTriples1.containsKey(triple.location)) //
+                        .collect(Collectors.toList());
 
         // add these triples to the merged evicted set
         mergedDefAnalysisInfo.evictedSet.addAll(inconsistentLocationTriples2);
