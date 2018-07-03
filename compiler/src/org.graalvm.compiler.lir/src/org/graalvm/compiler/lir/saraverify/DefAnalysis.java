@@ -90,15 +90,33 @@ public class DefAnalysis {
             // TODO: remove debug
             Map<Value, List<Triple>> debugGroupedLocationTriples = mergedDefAnalysisInfo.getGroupedTriples();
 
+            // log information
+            try (Indent i = debugContext.indent(); Scope s = debugContext.scope(DEBUG_SCOPE)) {
+                debugContext.log(3, "Computing local flow...");
+            }
             computeLocalFlow(lir.getLIRforBlock(block), mergedDefAnalysisInfo, mapping, callerSaveRegisterValues);
+
+            // log information
+            try (Indent i = debugContext.indent(); Scope s = debugContext.scope(DEBUG_SCOPE)) {
+                debugContext.log(3, "Computing local flow done");
+            }
+
             DefAnalysisInfo previousDefAnalysisSets = blockInfos.get(block);
 
+            // log information
+            try (Indent i = debugContext.indent(); Scope s = debugContext.scope(DEBUG_SCOPE)) {
+                debugContext.log(3, "Compare previous def analysis info...");
+            }
             if (!mergedDefAnalysisInfo.equals(previousDefAnalysisSets)) {
                 blockInfos.put(block, mergedDefAnalysisInfo);
 
                 for (AbstractBlockBase<?> successor : block.getSuccessors()) {
                     blockQueue.set(successor.getId());
                 }
+            }
+            // log information
+            try (Indent i = debugContext.indent(); Scope s = debugContext.scope(DEBUG_SCOPE)) {
+                debugContext.log(3, "Compare previous def analysis info done.");
             }
 
             // log information
@@ -259,7 +277,6 @@ public class DefAnalysis {
             debugContext.log(3, "merging of sets...");
             if (visitedDefAnalysisInfos.size() == 1) {
                 mergedDefAnalysisInfo = visitedDefAnalysisInfos.get(0).clone();
-
             } else {
                 DefAnalysisInfo defAnalysisInfo0 = visitedDefAnalysisInfos.get(0);
                 DefAnalysisInfo defAnalysisInfo1 = visitedDefAnalysisInfos.get(1);

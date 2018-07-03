@@ -313,9 +313,6 @@ public class DefAnalysisInfo {
 
         // get all triples. that were not the same (regarding the combination of location and value)
         // in both def analysis infos
-// List<Triple> inconsistentLocationTriples2 = defAnalysisInfo2.locationSet.stream() //
-// .filter(triple ->
-// !mergedDefAnalysisInfo.locationSet.contains(triple)).collect(Collectors.toList());
         List<Triple> inconsistentLocationTriples2 = defAnalysisInfo2.locationSet.stream() //
                         .filter(triple -> !groupedLocationTriples1.containsKey(triple.location)) //
                         .collect(Collectors.toList());
