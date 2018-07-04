@@ -21,7 +21,7 @@ import jdk.vm.ci.meta.Value;
 
 public class DefAnalysisInfo {
 
-    class Triple {
+    static class Triple {
         private final Value location;
         private final DuSequenceWeb value;
         private final ArrayList<LIRInstruction> instructionSequence;
@@ -280,7 +280,7 @@ public class DefAnalysisInfo {
         evictedTriples.stream().forEach(triple -> evictedSet.add(new Triple(triple.location, triple.value, instruction)));
     }
 
-    public static DefAnalysisInfo mergeDefAnalysisInfo(DefAnalysisInfo defAnalysisInfo1, DefAnalysisInfo defAnalysisInfo2) {
+    public static DefAnalysisInfo mergeDefAnalysisInfo(DefAnalysisInfo defAnalysisInfo1, DefAnalysisInfo defAnalysisInfo2, LIRInstruction mergeInstruction) {
         DefAnalysisInfo mergedDefAnalysisInfo = new DefAnalysisInfo();
 
         // add evicted triples from both parameters to the merged def analysis info
@@ -306,8 +306,9 @@ public class DefAnalysisInfo {
                 mergedDefAnalysisInfo.locationSet.addAll(locationTriples2);
             } else {
                 // add to evicted in merged
-                mergedDefAnalysisInfo.evictedSet.addAll(entry.getValue());
-                mergedDefAnalysisInfo.evictedSet.addAll(locationTriples2);
+                entry.getValue().stream().forEach(triple -> mergedDefAnalysisInfo.evictedSet.add(new Triple(triple.location, triple.value, mergeInstruction)));
+                locationTriples2.stream().forEach(triple -> mergedDefAnalysisInfo.evictedSet.add(new Triple(triple.location, triple.value, mergeInstruction)));
+
             }
         }
 

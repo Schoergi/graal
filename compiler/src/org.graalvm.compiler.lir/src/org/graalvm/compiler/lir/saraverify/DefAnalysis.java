@@ -280,10 +280,10 @@ public class DefAnalysis {
             } else {
                 DefAnalysisInfo defAnalysisInfo0 = visitedDefAnalysisInfos.get(0);
                 DefAnalysisInfo defAnalysisInfo1 = visitedDefAnalysisInfos.get(1);
-                DefAnalysisInfo firstMerge = DefAnalysisInfo.mergeDefAnalysisInfo(defAnalysisInfo0, defAnalysisInfo1);
+                DefAnalysisInfo firstMerge = DefAnalysisInfo.mergeDefAnalysisInfo(defAnalysisInfo0, defAnalysisInfo1, labelInstruction);
                 mergedDefAnalysisInfo = visitedDefAnalysisInfos.stream()    //
                                 .filter(defAnalysisInfo -> (defAnalysisInfo != defAnalysisInfo0) || (defAnalysisInfo != defAnalysisInfo1))  //
-                                .collect(Collectors.reducing(firstMerge, (x, y) -> DefAnalysisInfo.mergeDefAnalysisInfo(x, y)));
+                                .collect(Collectors.reducing(firstMerge, (x, y) -> DefAnalysisInfo.mergeDefAnalysisInfo(x, y, labelInstruction)));
             }
 
             if (phiInValues == null) {
