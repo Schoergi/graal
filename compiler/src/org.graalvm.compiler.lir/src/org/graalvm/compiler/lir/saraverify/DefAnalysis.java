@@ -89,6 +89,9 @@ public class DefAnalysis {
 
             // TODO: remove debug
             Map<Value, List<Triple>> debugGroupedLocationTriples = mergedDefAnalysisInfo.getGroupedTriples();
+            for (Entry<Value, List<Triple>> entry : debugGroupedLocationTriples.entrySet()) {
+                assert entry.getValue().stream().map(triple -> triple.getValue()).distinct().count() == 1 : "More than one value in location.";
+            }
 
             // log information
             try (Indent i = debugContext.indent(); Scope s = debugContext.scope(DEBUG_SCOPE)) {
@@ -250,7 +253,8 @@ public class DefAnalysis {
                 for (int i = 0; i < phiInValues.size(); i++) {
                     BlockMap<List<Triple>> phiOutLocationTriplesMap = new BlockMap<>(lir.getControlFlowGraph());
 
-                    // get all locations from the predecessors that hold a value
+                    // get all locations from the predecessors that hold a value (as a start for
+                    // potential locations for the phi in value)
                     List<Value> locations = DefAnalysisInfo.distinctLocations(visitedDefAnalysisInfos);
 
                     for (AbstractBlockBase<?> predecessor : visitedPredecessors) {
@@ -286,6 +290,7 @@ public class DefAnalysis {
                                 .collect(Collectors.reducing(firstMerge, (x, y) -> DefAnalysisInfo.mergeDefAnalysisInfo(x, y, labelInstruction)));
             }
 
+            // return merged set, if no phi values have to be added
             if (phiInValues == null) {
                 debugContext.log(3, "merging done");
                 return mergedDefAnalysisInfo;
@@ -301,6 +306,8 @@ public class DefAnalysis {
                 // get mapping for phi in value
                 DefNode defNode = new DefNode(phiInValue, labelInstruction, i);
                 DuSequenceWeb mappedWeb = mapping.get(defNode);
+
+                mergedDefAnalysisInfo.destroyValuesAtLocations(locations, labelInstruction);
 
                 // add phi in triples to the merged def analysis info location set
                 locations.stream().forEach(location -> mergedDefAnalysisInfo.addLocation(location, mappedWeb, labelInstruction, false));
