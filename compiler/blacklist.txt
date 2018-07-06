@@ -3,3 +3,25 @@ org.graalvm.compiler.jtt.lang.Math_pow
 org.graalvm.compiler.jtt.lang.Math_exp
 org.graalvm.compiler.lir.jtt.saraverify.faultinjection.*
 org.graalvm.compiler.lir.jtt.saraverify.VerificationTest
+
+org.graalvm.compiler.jtt.threads.Object_wait01
+org.graalvm.compiler.jtt.threads.Object_wait02
+org.graalvm.compiler.jtt.threads.Object_wait03
+org.graalvm.compiler.jtt.threads.Object_wait04
+
+org.graalvm.compiler.jtt.lang.ClassLoader_loadClass01
+org.graalvm.compiler.jtt.backend.LargeConstantSectionTest
+org.graalvm.compiler.jtt.threads.Monitor_notowner01
+org.graalvm.compiler.jtt.threads.Thread_isInterrupted02
+org.graalvm.compiler.jtt.threads.Thread_isInterrupted05
+
+# sara verify error
+org.graalvm.compiler.jtt.micro.String_format02
+org.graalvm.compiler.jtt.micro.Matrix01
+# org.graalvm.compiler.jtt.except.StackTrace_AIOOBE_00#run2
+# org.graalvm.compiler.jtt.hotpath.HP_field02#run0
+# org.graalvm.compiler.jtt.except.StackTrace_NPE_01#run0
+# org.graalvm.compiler.jtt.except.StackTrace_NPE_01#run1
+# org.graalvm.compiler.jtt.except.StackTrace_NPE_01#run2
+# org.graalvm.compiler.jtt.except.StackTrace_NPE_00#run0
+# org.graalvm.compiler.jtt.except.StackTrace_NPE_00#run1
