@@ -154,12 +154,7 @@ public class ErrorAnalysis {
         stringBuilder.append(value);
         stringBuilder.append("\n");
         stringBuilder.append("The value become stale along the following sequence:\n");
-        for (LIRInstruction inst : staleTriple.getInstructionSequence()) {
-            stringBuilder.append(inst.id());
-            stringBuilder.append("; ");
-            stringBuilder.append(inst);
-            stringBuilder.append("\n");
-        }
+        appendInstructionSequence(staleTriple.getInstructionSequence(), stringBuilder);
     }
 
     private static void appendEvictedErrorMessage(Value value, LIRInstruction instruction, StringBuilder stringBuilder, List<Triple> evictedTriples) {
@@ -175,8 +170,21 @@ public class ErrorAnalysis {
             stringBuilder.append("value evicted from location ");
             stringBuilder.append(triple.getLocation());
             stringBuilder.append(" in ");
-            stringBuilder.append(triple.getInstructionSequence());
+            appendInstructionSequence(triple.getInstructionSequence(), stringBuilder);
             stringBuilder.append("\n");
+        }
+    }
+
+    private static void appendInstructionSequence(ArrayList<LIRInstruction> instructionSequence, StringBuilder stringBuilder) {
+        for (int i = 0; i < instructionSequence.size(); i++) {
+            if (i > 0) {
+                stringBuilder.append(", ");
+            }
+
+            LIRInstruction instruction = instructionSequence.get(i);
+            stringBuilder.append(instruction.id());
+            stringBuilder.append(" ");
+            stringBuilder.append(instruction);
         }
     }
 
