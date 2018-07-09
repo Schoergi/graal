@@ -293,7 +293,7 @@ public class DefAnalysisInfo {
         // iterate over list of triples for every location
         for (Entry<Value, List<Triple>> entry : groupedLocationTriples1.entrySet()) {
             assert entry.getValue().size() > 0 : "Location set holds one or more triples for the given location but with no value.";
-            assert entry.getValue().stream().map(triple -> triple.value).distinct().count() == 1 : "More than one value in location.";
+
             DuSequenceWeb web1 = entry.getValue().get(0).getValue();
 
             // get triples with location from def analysis info 2

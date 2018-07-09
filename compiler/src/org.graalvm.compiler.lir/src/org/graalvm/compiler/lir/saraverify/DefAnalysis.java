@@ -89,9 +89,6 @@ public class DefAnalysis {
 
             // TODO: remove debug
             Map<Value, List<Triple>> debugGroupedLocationTriples = mergedDefAnalysisInfo.getGroupedTriples();
-            for (Entry<Value, List<Triple>> entry : debugGroupedLocationTriples.entrySet()) {
-                assert entry.getValue().stream().map(triple -> triple.getValue()).distinct().count() == 1 : "More than one value in location.";
-            }
 
             // log information
             try (Indent i = debugContext.indent(); Scope s = debugContext.scope(DEBUG_SCOPE)) {
@@ -296,6 +293,10 @@ public class DefAnalysis {
                 return mergedDefAnalysisInfo;
             }
 
+            for (List<Value> locations : phiInLocations.values()) {
+                mergedDefAnalysisInfo.destroyValuesAtLocations(locations, labelInstruction);
+            }
+
             // add new triples for phi in
             debugContext.log(3, "add triples of phis...");
             int i = 0;
@@ -306,8 +307,6 @@ public class DefAnalysis {
                 // get mapping for phi in value
                 DefNode defNode = new DefNode(phiInValue, labelInstruction, i);
                 DuSequenceWeb mappedWeb = mapping.get(defNode);
-
-                mergedDefAnalysisInfo.destroyValuesAtLocations(locations, labelInstruction);
 
                 // add phi in triples to the merged def analysis info location set
                 locations.stream().forEach(location -> mergedDefAnalysisInfo.addLocation(location, mappedWeb, labelInstruction, false));
