@@ -12,8 +12,20 @@ org.graalvm.compiler.jtt.threads.Object_wait04
 org.graalvm.compiler.jtt.lang.ClassLoader_loadClass01
 org.graalvm.compiler.jtt.backend.LargeConstantSectionTest
 org.graalvm.compiler.jtt.threads.Monitor_notowner01
+org.graalvm.compiler.jtt.threads.Thread_new01
 org.graalvm.compiler.jtt.threads.Thread_isInterrupted02
+org.graalvm.compiler.jtt.threads.Thread_isInterrupted03
+org.graalvm.compiler.jtt.threads.Thread_isInterrupted04
 org.graalvm.compiler.jtt.threads.Thread_isInterrupted05
+org.graalvm.compiler.jtt.threads.SynchronizedLoopExit01
+org.graalvm.compiler.jtt.threads.Thread_join01
+org.graalvm.compiler.jtt.threads.Thread_join02
+org.graalvm.compiler.jtt.threads.Thread_join03
+org.graalvm.compiler.jtt.micro.BigObjectParams02 
+org.graalvm.compiler.jtt.hotpath.HP_life
+org.graalvm.compiler.jtt.hotpath.HP_demo01 
+
+org.graalvm.compiler.jtt.jdk.System_setOut
 
 # sara verify error
 org.graalvm.compiler.jtt.micro.String_format02
