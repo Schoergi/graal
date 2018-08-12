@@ -23,19 +23,22 @@ public class DefAnalysisInfo {
     class Triple {
         private final Value location;
         private final DuSequenceWeb value;
-        private final ArrayList<LIRInstruction> instructionSequence;
+        private final ArrayList<ArrayList<LIRInstruction>> instructionSequences;
 
         public Triple(Value location, DuSequenceWeb value, LIRInstruction instruction) {
             this.location = SARAVerifyUtil.getValueIllegalValueKind(location);
             this.value = value;
-            instructionSequence = new ArrayList<>();
+            instructionSequences = new ArrayList<>();
+
+            ArrayList<LIRInstruction> instructionSequence = new ArrayList<>();
             instructionSequence.add(instruction);
+            instructionSequences.add(instructionSequence);
         }
 
-        public Triple(Value location, DuSequenceWeb value, ArrayList<LIRInstruction> instructionSequence) {
+        public Triple(Value location, DuSequenceWeb value, ArrayList<ArrayList<LIRInstruction>> instructionSequences) {
             this.location = SARAVerifyUtil.getValueIllegalValueKind(location);
             this.value = value;
-            this.instructionSequence = instructionSequence;
+            this.instructionSequences = instructionSequences;
         }
 
         public Value getLocation() {
@@ -46,19 +49,31 @@ public class DefAnalysisInfo {
             return value;
         }
 
-        public ArrayList<LIRInstruction> getInstructionSequence() {
-            return new ArrayList<>(instructionSequence);
+        public ArrayList<ArrayList<LIRInstruction>> getInstructionSequences() {
+            ArrayList<ArrayList<LIRInstruction>> newInstructionSequences = new ArrayList<>();
+
+            for (ArrayList<LIRInstruction> instructionSequence : instructionSequences) {
+                newInstructionSequences.add(new ArrayList<>(instructionSequence));
+            }
+
+            return newInstructionSequences;
         }
 
         public boolean containsInstruction(LIRInstruction instruction) {
-            return instructionSequence.contains(instruction);
+            for (ArrayList<LIRInstruction> instructionSequence : instructionSequences) {
+                if (instructionSequence.contains(instruction)) {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         @Override
         public int hashCode() {
             final int prime = 31;
             int result = 1;
-            result = prime * result + instructionSequenceHashCode();
+            // result = prime * result + instructionSequenceHashCode();
             result = prime * result + location.hashCode();
             result = prime * result + value.hashCode();
             return result;
@@ -66,8 +81,10 @@ public class DefAnalysisInfo {
 
         private int instructionSequenceHashCode() {
             int hashCode = 1;
-            for (LIRInstruction instruction : instructionSequence) {
-                hashCode = 31 * hashCode + (instruction == null ? 0 : System.identityHashCode(instruction));
+            for (ArrayList<LIRInstruction> instructionSequence : instructionSequences) {
+                for (LIRInstruction instruction : instructionSequence) {
+                    hashCode = 31 * hashCode + (instruction == null ? 0 : System.identityHashCode(instruction));
+                }
             }
 
             return hashCode;
@@ -80,7 +97,9 @@ public class DefAnalysisInfo {
             }
 
             Triple triple = (Triple) obj;
-            return equalsLocationAndValue(triple) && this.instructionSequence.equals(triple.instructionSequence);
+            // return equalsLocationAndValue(triple) &&
+            // this.instructionSequences.equals(triple.instructionSequences);
+            return equalsLocationAndValue(triple);
         }
 
         /**
@@ -97,16 +116,26 @@ public class DefAnalysisInfo {
 
         @Override
         protected Object clone() throws CloneNotSupportedException {
-            return new Triple(location, value, new ArrayList<>(instructionSequence));
+            // TODO: cloning of instruction sequences
+            return new Triple(location, value, new ArrayList<>(instructionSequences));
         }
 
         @Override
         public String toString() {
-            String s = "( " + location + ", " + String.format("0x%h", value.hashCode()) + ", <";
+            StringBuilder sb = new StringBuilder();
 
-            s = s + instructionSequence.stream().map(instruction -> instruction.id() + ":" + instruction.name()).collect(Collectors.joining(", "));
+            sb.append("( ");
+            sb.append(location);
+            sb.append(", ");
+            sb.append(String.format("0x%h", value.hashCode()));
+            sb.append(", <");
 
-            return s + "> )";
+            for (ArrayList<LIRInstruction> instructionSequence : instructionSequences) {
+                sb.append(instructionSequence.stream().map(instruction -> instruction.id() + ":" + instruction.name()).collect(Collectors.joining(", ")));
+            }
+
+            sb.append("> )");
+            return sb.toString();
         }
     }
 
@@ -160,8 +189,9 @@ public class DefAnalysisInfo {
     }
 
     public static Set<Triple> locationSetIntersection(List<DefAnalysisInfo> defAnalysisSets) {
-        Stream<Triple> locationUnionStream = defAnalysisSets.stream().flatMap(sets -> sets.locationSet.stream());
-        Stream<Triple> locationIntersectedStream = locationUnionStream.filter(triple -> defAnalysisSets.stream().allMatch(sets -> containsTriple(triple, sets.locationSet)));
+        Stream<Triple> locationUnionStream = locationSetUnionStream(defAnalysisSets);
+        Stream<Triple> locationIntersectedStream = locationUnionStream  //
+                        .filter(triple -> defAnalysisSets.stream().allMatch(sets -> containsTriple(triple, sets.locationSet)));
         return locationIntersectedStream.collect(Collectors.toSet());
     }
 
@@ -244,9 +274,15 @@ public class DefAnalysisInfo {
                         .filter(triple -> triple.location.equals(SARAVerifyUtil.getValueIllegalValueKind(input)) && !triple.containsInstruction(instruction))   //
                         .collect(Collectors.toList());
         triples.forEach(triple -> {
-            ArrayList<LIRInstruction> instructions = new ArrayList<>(triple.instructionSequence);
-            instructions.add(instruction);
-            locationSet.add(new Triple(result, triple.value, instructions));
+            ArrayList<ArrayList<LIRInstruction>> instructionSequences = new ArrayList<>();
+
+            for (ArrayList<LIRInstruction> instructionSequence : triple.instructionSequences) {
+                ArrayList<LIRInstruction> newInstructionSequence = new ArrayList<>(instructionSequence);
+                newInstructionSequence.add(instruction);
+                instructionSequences.add(newInstructionSequence);
+            }
+
+            locationSet.add(new Triple(result, triple.value, instructionSequences));
 
             removeFromEvicted(result, triple.value);
         });
@@ -258,9 +294,15 @@ public class DefAnalysisInfo {
                         .filter(triple -> triple.location.equals(SARAVerifyUtil.getValueIllegalValueKind(input)) && !triple.containsInstruction(instruction))   //
                         .collect(Collectors.toList());
         triples.forEach(triple -> {
-            ArrayList<LIRInstruction> instructions = new ArrayList<>(triple.instructionSequence);
-            instructions.add(instruction);
-            staleSet.add(new Triple(result, triple.value, instructions));
+            ArrayList<ArrayList<LIRInstruction>> instructionSequences = new ArrayList<>();
+
+            for (ArrayList<LIRInstruction> instructionSequence : triple.instructionSequences) {
+                ArrayList<LIRInstruction> newInstructionSequence = new ArrayList<>(instructionSequence);
+                newInstructionSequence.add(instruction);
+                instructionSequences.add(newInstructionSequence);
+            }
+
+            staleSet.add(new Triple(result, triple.value, instructionSequences));
         });
     }
 

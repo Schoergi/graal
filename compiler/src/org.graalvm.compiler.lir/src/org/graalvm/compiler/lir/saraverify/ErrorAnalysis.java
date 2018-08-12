@@ -154,7 +154,8 @@ public class ErrorAnalysis {
         stringBuilder.append(value);
         stringBuilder.append("\n");
         stringBuilder.append("The value become stale along the following sequence:\n");
-        appendInstructionSequence(staleTriple.getInstructionSequence(), stringBuilder);
+        // TODO: print instruction sequences
+        // appendInstructionSequence(staleTriple.getInstructionSequence(), stringBuilder);
     }
 
     private static void appendEvictedErrorMessage(Value value, LIRInstruction instruction, StringBuilder stringBuilder, List<Triple> evictedTriples) {
@@ -170,7 +171,8 @@ public class ErrorAnalysis {
             stringBuilder.append("value evicted from location ");
             stringBuilder.append(triple.getLocation());
             stringBuilder.append(" in ");
-            appendInstructionSequence(triple.getInstructionSequence(), stringBuilder);
+            // TODO: print instruction sequences
+            // appendInstructionSequence(triple.getInstructionSequence(), stringBuilder);
             stringBuilder.append("\n");
         }
     }
