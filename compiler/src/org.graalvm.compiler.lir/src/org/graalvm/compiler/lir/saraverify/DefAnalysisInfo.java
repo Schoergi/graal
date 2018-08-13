@@ -1,6 +1,5 @@
 package org.graalvm.compiler.lir.saraverify;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -22,22 +21,64 @@ import jdk.vm.ci.meta.Value;
 
 public class DefAnalysisInfo {
 
+    static class InstructionSequenceNode {
+        private final LIRInstruction instruction;
+        private final Set<InstructionSequenceNode> predecessors;
+
+        public InstructionSequenceNode(LIRInstruction instruction) {
+            this.instruction = instruction;
+            predecessors = new HashSet<>();
+        }
+
+        public InstructionSequenceNode(LIRInstruction instruction, Set<InstructionSequenceNode> predecessors) {
+            this.instruction = instruction;
+            this.predecessors = predecessors;
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((instruction == null) ? 0 : System.identityHashCode(instruction));
+            result = prime * result + ((predecessors == null) ? 0 : predecessors.hashCode());
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (!(obj instanceof InstructionSequenceNode)) {
+                return false;
+            }
+
+            InstructionSequenceNode instructionSequenceNode = (InstructionSequenceNode) obj;
+
+            return instructionSequenceNode.instruction.equals(this.instruction) && instructionSequenceNode.predecessors.equals(this.predecessors);
+        }
+
+        public boolean containsInstruction(LIRInstruction instruction) {
+            if (this.instruction.equals(instruction)) {
+                return true;
+            }
+
+            return predecessors.stream().anyMatch(node -> node.containsInstruction(instruction));
+        }
+    }
+
     static class Triple {
         private final Value location;
         private final DuSequenceWeb value;
-        private final Set<ArrayList<LIRInstruction>> instructionSequences;
+        private final Set<InstructionSequenceNode> instructionSequences;
 
         public Triple(Value location, DuSequenceWeb value, LIRInstruction instruction) {
             this.location = SARAVerifyUtil.getValueIllegalValueKind(location);
             this.value = value;
             instructionSequences = new HashSet<>();
 
-            ArrayList<LIRInstruction> instructionSequence = new ArrayList<>();
-            instructionSequence.add(instruction);
-            instructionSequences.add(instructionSequence);
+            InstructionSequenceNode node = new InstructionSequenceNode(instruction);
+            instructionSequences.add(node);
         }
 
-        public Triple(Value location, DuSequenceWeb value, Set<ArrayList<LIRInstruction>> instructionSequences) {
+        public Triple(Value location, DuSequenceWeb value, Set<InstructionSequenceNode> instructionSequences) {
             this.location = SARAVerifyUtil.getValueIllegalValueKind(location);
             this.value = value;
             this.instructionSequences = instructionSequences;
@@ -51,24 +92,12 @@ public class DefAnalysisInfo {
             return value;
         }
 
-        public ArrayList<ArrayList<LIRInstruction>> getInstructionSequences() {
-            ArrayList<ArrayList<LIRInstruction>> newInstructionSequences = new ArrayList<>();
-
-            for (ArrayList<LIRInstruction> instructionSequence : instructionSequences) {
-                newInstructionSequences.add(new ArrayList<>(instructionSequence));
-            }
-
-            return newInstructionSequences;
+        public Set<InstructionSequenceNode> getInstructionSequences() {
+            return instructionSequences;
         }
 
         public boolean containsInstruction(LIRInstruction instruction) {
-            for (ArrayList<LIRInstruction> instructionSequence : instructionSequences) {
-                if (instructionSequence.contains(instruction)) {
-                    return true;
-                }
-            }
-
-            return false;
+            return instructionSequences.stream().anyMatch(sequence -> sequence.containsInstruction(instruction));
         }
 
         @Override
@@ -81,16 +110,16 @@ public class DefAnalysisInfo {
             return result;
         }
 
-        private int instructionSequenceHashCode() {
-            int hashCode = 1;
-            for (ArrayList<LIRInstruction> instructionSequence : instructionSequences) {
-                for (LIRInstruction instruction : instructionSequence) {
-                    hashCode = 31 * hashCode + (instruction == null ? 0 : System.identityHashCode(instruction));
-                }
-            }
-
-            return hashCode;
-        }
+// private int instructionSequenceHashCode() {
+// int hashCode = 1;
+// for (ArrayList<LIRInstruction> instructionSequence : instructionSequences) {
+// for (LIRInstruction instruction : instructionSequence) {
+// hashCode = 31 * hashCode + (instruction == null ? 0 : System.identityHashCode(instruction));
+// }
+// }
+//
+// return hashCode;
+// }
 
         @Override
         public boolean equals(Object obj) {
@@ -131,9 +160,10 @@ public class DefAnalysisInfo {
             sb.append(String.format("0x%h", value.hashCode()));
             sb.append(", <");
 
-            for (ArrayList<LIRInstruction> instructionSequence : instructionSequences) {
-                sb.append(instructionSequence.stream().map(instruction -> instruction.id() + ":" + instruction.name()).collect(Collectors.joining(", ")));
-            }
+// for (ArrayList<LIRInstruction> instructionSequence : instructionSequences) {
+// sb.append(instructionSequence.stream().map(instruction -> instruction.id() + ":" +
+// instruction.name()).collect(Collectors.joining(", ")));
+// }
 
             sb.append("> )");
             return sb.toString();
@@ -227,7 +257,7 @@ public class DefAnalysisInfo {
             if (optionalTriple.isPresent()) {
                 Triple retrievedTriple = optionalTriple.get();
 
-                Set<ArrayList<LIRInstruction>> instructionSequences = new HashSet<>(triple.instructionSequences);
+                Set<InstructionSequenceNode> instructionSequences = new HashSet<>(triple.instructionSequences);
                 instructionSequences.addAll(retrievedTriple.instructionSequences);
 
                 mergedLocationSet.add(new Triple(triple.location, triple.value, instructionSequences));
@@ -316,13 +346,10 @@ public class DefAnalysisInfo {
                         .filter(triple -> triple.location.equals(SARAVerifyUtil.getValueIllegalValueKind(input)) && !triple.containsInstruction(instruction))   //
                         .collect(Collectors.toList());
         triples.forEach(triple -> {
-            Set<ArrayList<LIRInstruction>> instructionSequences = new HashSet<>();
+            InstructionSequenceNode node = new InstructionSequenceNode(instruction, triple.instructionSequences);
 
-            for (ArrayList<LIRInstruction> instructionSequence : triple.instructionSequences) {
-                ArrayList<LIRInstruction> newInstructionSequence = new ArrayList<>(instructionSequence);
-                newInstructionSequence.add(instruction);
-                instructionSequences.add(newInstructionSequence);
-            }
+            HashSet<InstructionSequenceNode> instructionSequences = new HashSet<>();
+            instructionSequences.add(node);
 
             locationSet.add(new Triple(result, triple.value, instructionSequences));
 
@@ -336,13 +363,10 @@ public class DefAnalysisInfo {
                         .filter(triple -> triple.location.equals(SARAVerifyUtil.getValueIllegalValueKind(input)) && !triple.containsInstruction(instruction))   //
                         .collect(Collectors.toList());
         triples.forEach(triple -> {
-            Set<ArrayList<LIRInstruction>> instructionSequences = new HashSet<>();
+            InstructionSequenceNode node = new InstructionSequenceNode(instruction, triple.instructionSequences);
 
-            for (ArrayList<LIRInstruction> instructionSequence : triple.instructionSequences) {
-                ArrayList<LIRInstruction> newInstructionSequence = new ArrayList<>(instructionSequence);
-                newInstructionSequence.add(instruction);
-                instructionSequences.add(newInstructionSequence);
-            }
+            HashSet<InstructionSequenceNode> instructionSequences = new HashSet<>();
+            instructionSequences.add(node);
 
             staleSet.add(new Triple(result, triple.value, instructionSequences));
         });
