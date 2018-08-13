@@ -5,12 +5,14 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.graalvm.compiler.debug.DebugContext;
 import org.graalvm.compiler.debug.DebugContext.Scope;
+import org.graalvm.compiler.debug.GraalError;
 import org.graalvm.compiler.debug.Indent;
 import org.graalvm.compiler.lir.LIRInstruction;
 import org.graalvm.compiler.lir.LIRValueUtil;
@@ -20,22 +22,22 @@ import jdk.vm.ci.meta.Value;
 
 public class DefAnalysisInfo {
 
-    class Triple {
+    static class Triple {
         private final Value location;
         private final DuSequenceWeb value;
-        private final ArrayList<ArrayList<LIRInstruction>> instructionSequences;
+        private final Set<ArrayList<LIRInstruction>> instructionSequences;
 
         public Triple(Value location, DuSequenceWeb value, LIRInstruction instruction) {
             this.location = SARAVerifyUtil.getValueIllegalValueKind(location);
             this.value = value;
-            instructionSequences = new ArrayList<>();
+            instructionSequences = new HashSet<>();
 
             ArrayList<LIRInstruction> instructionSequence = new ArrayList<>();
             instructionSequence.add(instruction);
             instructionSequences.add(instructionSequence);
         }
 
-        public Triple(Value location, DuSequenceWeb value, ArrayList<ArrayList<LIRInstruction>> instructionSequences) {
+        public Triple(Value location, DuSequenceWeb value, Set<ArrayList<LIRInstruction>> instructionSequences) {
             this.location = SARAVerifyUtil.getValueIllegalValueKind(location);
             this.value = value;
             this.instructionSequences = instructionSequences;
@@ -115,9 +117,8 @@ public class DefAnalysisInfo {
         }
 
         @Override
-        protected Object clone() throws CloneNotSupportedException {
-            // TODO: cloning of instruction sequences
-            return new Triple(location, value, new ArrayList<>(instructionSequences));
+        protected Triple clone() throws CloneNotSupportedException {
+            return new Triple(location, value, new HashSet<>(instructionSequences));
         }
 
         @Override
@@ -188,11 +189,52 @@ public class DefAnalysisInfo {
         return defAnalysisSets.stream().flatMap(sets -> sets.locationSet.stream());
     }
 
-    public static Set<Triple> locationSetIntersection(List<DefAnalysisInfo> defAnalysisSets) {
-        Stream<Triple> locationUnionStream = locationSetUnionStream(defAnalysisSets);
-        Stream<Triple> locationIntersectedStream = locationUnionStream  //
-                        .filter(triple -> defAnalysisSets.stream().allMatch(sets -> containsTriple(triple, sets.locationSet)));
-        return locationIntersectedStream.collect(Collectors.toSet());
+    public static Set<Triple> locationSetIntersection(List<DefAnalysisInfo> defAnalysisInfos) {
+
+        if (defAnalysisInfos.size() == 1) {
+            Set<Triple> locationSet = new HashSet<>();
+
+            for (Triple triple : defAnalysisInfos.get(0).locationSet) {
+                try {
+                    locationSet.add(triple.clone());
+                } catch (CloneNotSupportedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+
+            return locationSet;
+        }
+
+        Optional<Set<Triple>> mergedLocationSet = defAnalysisInfos.stream()  //
+                        .map(info -> info.locationSet).reduce((set1, set2) -> mergeLocationSet(set1, set2));
+
+        if (mergedLocationSet.isPresent()) {
+            return mergedLocationSet.get();
+        } else {
+            GraalError.shouldNotReachHere("No result set of merging location sets.");
+        }
+
+        return null;
+    }
+
+    private static Set<Triple> mergeLocationSet(Set<Triple> set1, Set<Triple> set2) {
+        Set<Triple> mergedLocationSet = new HashSet<>();
+
+        for (Triple triple : set1) {
+            Optional<Triple> optionalTriple = set2.stream().filter(t -> t.equalsLocationAndValue(triple)).findFirst();
+
+            if (optionalTriple.isPresent()) {
+                Triple retrievedTriple = optionalTriple.get();
+
+                Set<ArrayList<LIRInstruction>> instructionSequences = new HashSet<>(triple.instructionSequences);
+                instructionSequences.addAll(retrievedTriple.instructionSequences);
+
+                mergedLocationSet.add(new Triple(triple.location, triple.value, instructionSequences));
+            }
+        }
+
+        return mergedLocationSet;
     }
 
     public static Set<Triple> staleSetUnion(List<DefAnalysisInfo> defAnalysisSets) {
@@ -274,7 +316,7 @@ public class DefAnalysisInfo {
                         .filter(triple -> triple.location.equals(SARAVerifyUtil.getValueIllegalValueKind(input)) && !triple.containsInstruction(instruction))   //
                         .collect(Collectors.toList());
         triples.forEach(triple -> {
-            ArrayList<ArrayList<LIRInstruction>> instructionSequences = new ArrayList<>();
+            Set<ArrayList<LIRInstruction>> instructionSequences = new HashSet<>();
 
             for (ArrayList<LIRInstruction> instructionSequence : triple.instructionSequences) {
                 ArrayList<LIRInstruction> newInstructionSequence = new ArrayList<>(instructionSequence);
@@ -294,7 +336,7 @@ public class DefAnalysisInfo {
                         .filter(triple -> triple.location.equals(SARAVerifyUtil.getValueIllegalValueKind(input)) && !triple.containsInstruction(instruction))   //
                         .collect(Collectors.toList());
         triples.forEach(triple -> {
-            ArrayList<ArrayList<LIRInstruction>> instructionSequences = new ArrayList<>();
+            Set<ArrayList<LIRInstruction>> instructionSequences = new HashSet<>();
 
             for (ArrayList<LIRInstruction> instructionSequence : triple.instructionSequences) {
                 ArrayList<LIRInstruction> newInstructionSequence = new ArrayList<>(instructionSequence);
