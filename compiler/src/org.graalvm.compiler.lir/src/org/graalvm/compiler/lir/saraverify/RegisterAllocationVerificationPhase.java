@@ -66,6 +66,7 @@ public class RegisterAllocationVerificationPhase extends LIRPhase<AllocationCont
 
         if (lirGenRes.getLIR().getControlFlowGraph().getBlocks().length > Options.SARAVerifyBlockLimit.getValue(debugContext.getOptions())) {
             skippedCompilationUnits.increment(debugContext);
+            System.err.println("Skipped SARAVerify for: " + lirGenRes.getCompilationId());
             return;
         }
 
