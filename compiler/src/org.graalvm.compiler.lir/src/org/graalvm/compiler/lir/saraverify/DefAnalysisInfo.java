@@ -24,19 +24,21 @@ public class DefAnalysisInfo {
     static class InstructionSequenceNode {
         private final LIRInstruction instruction;
         private final Set<InstructionSequenceNode> predecessors;
+        private final int hashCode;
 
         public InstructionSequenceNode(LIRInstruction instruction) {
             this.instruction = instruction;
             predecessors = new HashSet<>();
+            hashCode = calculateHashCode();
         }
 
         public InstructionSequenceNode(LIRInstruction instruction, Set<InstructionSequenceNode> predecessors) {
             this.instruction = instruction;
             this.predecessors = predecessors;
+            hashCode = calculateHashCode();
         }
 
-        @Override
-        public int hashCode() {
+        private int calculateHashCode() {
             final int prime = 31;
             int result = 1;
             result = prime * result + ((instruction == null) ? 0 : System.identityHashCode(instruction));
@@ -45,7 +47,16 @@ public class DefAnalysisInfo {
         }
 
         @Override
+        public int hashCode() {
+            return hashCode;
+        }
+
+        @Override
         public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+
             if (!(obj instanceof InstructionSequenceNode)) {
                 return false;
             }
@@ -55,12 +66,12 @@ public class DefAnalysisInfo {
             return instructionSequenceNode.instruction.equals(this.instruction) && instructionSequenceNode.predecessors.equals(this.predecessors);
         }
 
-        public boolean containsInstruction(LIRInstruction instruction) {
-            if (this.instruction.equals(instruction)) {
+        public boolean containsInstruction(LIRInstruction instr) {
+            if (this.instruction.equals(instr)) {
                 return true;
             }
 
-            return predecessors.stream().anyMatch(node -> node.containsInstruction(instruction));
+            return predecessors.stream().anyMatch(node -> node.containsInstruction(instr));
         }
     }
 
@@ -104,33 +115,25 @@ public class DefAnalysisInfo {
         public int hashCode() {
             final int prime = 31;
             int result = 1;
-            // result = prime * result + instructionSequenceHashCode();
+            result = prime * result + instructionSequences.hashCode();
             result = prime * result + location.hashCode();
             result = prime * result + value.hashCode();
             return result;
         }
 
-// private int instructionSequenceHashCode() {
-// int hashCode = 1;
-// for (ArrayList<LIRInstruction> instructionSequence : instructionSequences) {
-// for (LIRInstruction instruction : instructionSequence) {
-// hashCode = 31 * hashCode + (instruction == null ? 0 : System.identityHashCode(instruction));
-// }
-// }
-//
-// return hashCode;
-// }
-
         @Override
         public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+
             if (!(obj instanceof Triple)) {
                 return false;
             }
 
             Triple triple = (Triple) obj;
-            // return equalsLocationAndValue(triple) &&
-            // this.instructionSequences.equals(triple.instructionSequences);
-            return equalsLocationAndValue(triple);
+            return equalsLocationAndValue(triple) &&
+                            this.instructionSequences.equals(triple.instructionSequences);
         }
 
         /**
