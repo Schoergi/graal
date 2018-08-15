@@ -48,12 +48,13 @@ public class RegisterAllocationVerificationPhase extends LIRPhase<AllocationCont
     private static final CounterKey skippedCompilationUnits = DebugContext.counter("SARAVerifyRegisterAllocatorVerification[skipped compilation units]");
 
     private final static String DEBUG_SCOPE = "SARAVerifyRegisterAllocationVerification";
-    private final static int BLOCK_LIMIT = 2000;
 
     public static class Options {
         // @formatter:off
-		@Option(help = "Enable static analysis register allocation verification.", type = OptionType.Debug)
+		@Option(help = "Enable static analysis register allocation verification (SARAVerify).", type = OptionType.Debug)
 		public static final OptionKey<Boolean> SARAVerify = new OptionKey<>(false);
+		@Option(help = "Skip verification for compilation units with a higher number of blocks.", type = OptionType.Debug)
+		public static final OptionKey<Integer> SARAVerifyBlockLimit = new OptionKey<>(200);
 		// @formatter:on
     }
 
@@ -63,7 +64,7 @@ public class RegisterAllocationVerificationPhase extends LIRPhase<AllocationCont
 
         DebugContext debugContext = lirGenRes.getLIR().getDebug();
 
-        if (lirGenRes.getLIR().getControlFlowGraph().getBlocks().length > BLOCK_LIMIT) {
+        if (lirGenRes.getLIR().getControlFlowGraph().getBlocks().length > Options.SARAVerifyBlockLimit.getValue(debugContext.getOptions())) {
             skippedCompilationUnits.increment(debugContext);
             return;
         }

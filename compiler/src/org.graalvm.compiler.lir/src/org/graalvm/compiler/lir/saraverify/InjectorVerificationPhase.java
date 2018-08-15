@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+import org.graalvm.compiler.core.common.PermanentBailoutException;
 import org.graalvm.compiler.core.common.cfg.AbstractBlockBase;
 import org.graalvm.compiler.core.common.cfg.AbstractControlFlowGraph;
 import org.graalvm.compiler.core.common.cfg.BlockMap;
@@ -91,6 +92,8 @@ public class InjectorVerificationPhase extends LIRPhase<AllocationContext> {
                 testsDetectedInjectedErrors.increment(debugContext);
             }
         }
+
+        throw new PermanentBailoutException("SARAVerify Injector test");
     }
 
     private static boolean injectMissingSpillLoadErrors(LIR lir) {
